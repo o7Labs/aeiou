@@ -96,7 +96,7 @@ body {
 }
 
 .question-content {
-  background-color: 
+  background-color:
   #F2E5BF;
   padding: 20px;
   margin-bottom: 20px;
@@ -250,7 +250,7 @@ body {
   margin-top: 20px;
   padding: 10px;
   border: var(--pixel-border);
-  background-color: 
+  background-color:
   #F2E5BF;
   box-shadow: 4px 4px 0px rgb(0, 0, 0); /* Solid black shadow */
   border-radius: 5px;
@@ -415,7 +415,7 @@ body {
   padding: 1rem;
   margin-top: 1rem;
   margin-bottom: 1rem;
-  
+
   border: 2px solid #000000;
 }
 
@@ -429,4 +429,9 @@ body {
   font-family: monospace;
   font-size: 0.875rem;
   line-height: 1.25rem;
+}
+
+.answer-space {
+  width: 20px;
+  display: inline-block;
 }

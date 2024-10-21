@@ -34,6 +34,11 @@ export default function QuizGame() {
   const [showExplanation, setShowExplanation] = useState(false);
   const [isQuestionExpanded, setIsQuestionExpanded] = useState(false);
 
+  const [spacedIndices, setSpaceIndices] = useState<number[]>([]);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const [answerLength, setAnswerLength] = useState(0);
+
   const answerInputRef = useRef<HTMLInputElement>(null);
   const {
     client: supabase,
@@ -55,10 +60,6 @@ export default function QuizGame() {
     }
   }, [gameState]);
 
-
-
-
-
   const fetchQuestion = async () => {
     const { data, error } = await supabase
       .from("question")
@@ -70,6 +71,15 @@ export default function QuizGame() {
     if (error) {
       console.error("Error fetching question:", error);
     } else if (data) {
+      const answer = data?.answer;
+      const spacedIndices = answer
+        .split("")
+        .map((char: string, index: number) => (char === " " ? index : -1))
+        .filter((index: number) => index !== -1);
+      spacedIndices.sort((a: number, b: number) => a - b);
+      setSpaceIndices(spacedIndices);
+      setAnswerLength(answer.length);
+      data.answer = data.answer.replace(/ /g, "");
       setQuestion(data);
     }
   };
@@ -158,7 +168,6 @@ export default function QuizGame() {
     const newAnswer = answer.split("");
     newAnswer[index] = value.toUpperCase();
     setAnswer(newAnswer.join(""));
-
     if (newAnswer.join("").length === question?.answer.length) {
       handleSubmit(newAnswer.join(""));
     }
@@ -166,30 +175,32 @@ export default function QuizGame() {
 
   const handleSubmit = (submittedAnswer: string) => {
     if (!question) return;
-  
+
     // Ensure the submitted answer matches the length of the correct answer
     // Pad the submitted answer with spaces if it's shorter
     while (submittedAnswer.length < question.answer.length) {
       submittedAnswer += " ";
     }
-  
+
     // Generate feedback for each character
-    const newFeedback: Feedback = submittedAnswer.split("").map((char, index) => {
-      if (char === " " && question.answer[index] === " ") {
-        return "correct"; // Correct space at the correct position
-      } else if (char === question.answer[index]) {
-        return "correct"; // Correct character at the correct position
-      } else if (question.answer.includes(char)) {
-        return "wrong-position"; // Correct character but at the wrong position
-      } else {
-        return "incorrect"; // Incorrect character
-      }
-    });
-  
+    const newFeedback: Feedback = submittedAnswer
+      .split("")
+      .map((char, index) => {
+        if (char === " " && question.answer[index] === " ") {
+          return "correct"; // Correct space at the correct position
+        } else if (char === question.answer[index]) {
+          return "correct"; // Correct character at the correct position
+        } else if (question.answer.includes(char)) {
+          return "wrong-position"; // Correct character but at the wrong position
+        } else {
+          return "incorrect"; // Incorrect character
+        }
+      });
+
     // Add the attempt and feedback to their respective arrays
     setAttempts([...attempts, submittedAnswer]);
     setFeedback([...feedback, newFeedback]);
-  
+
     // Check if the game should end
     if (submittedAnswer.trim() === question.answer || attempts.length === 2) {
       const score = calculateScore([newFeedback], timeElapsed);
@@ -205,11 +216,12 @@ export default function QuizGame() {
         .finally(() => {
           setTimeElapsed(0);
         });
-  
+
       fetchStats();
     }
-  
+
     setAnswer(""); // Clear current answer for the next input
+    inputRefs.current[0]?.focus();
   };
 
   const formatTime = (seconds: number) => {
@@ -281,9 +293,21 @@ export default function QuizGame() {
     <div className="quix-container">
       <div className="w-full flex flex-row gap-10">
         <div className="w-full flex flex-col">
-        <div className="question-header" style={{ zIndex: 100, transform: 'translateX(-50%)', left: '50%', position: 'relative', bottom: '12px', padding: '4px 2px', width: '25%', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-  Question of the day
-</div>
+          <div
+            className="question-header"
+            style={{
+              zIndex: 100,
+              transform: "translateX(-50%)",
+              left: "50%",
+              position: "relative",
+              bottom: "12px",
+              padding: "4px 2px",
+              width: "25%",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+            }}
+          >
+            Question of the day
+          </div>
           <div className="question-content">
             <p className={`${isQuestionExpanded ? "" : "line-clamp-2"}`}>
               {question.question}
@@ -313,40 +337,95 @@ export default function QuizGame() {
             )}
           </div>
           <div className="attempts-container">
-  {attempts.map((attempt, index) => (
-    <div key={index} className="attempt-row">
-      {attempt.split("").map((char, charIndex) => (
-        char === " " ? (
-          <div key={charIndex} className="attempt-space" /> // Render space
-        ) : (
-          <div key={charIndex} className={`attempt-block ${getFeedbackColor(feedback[index][charIndex])}`}>
-            {char}
+            {attempts.map((attempt, index) => {
+              // Copy trimmed attempt and insert spaces based on spacedIndices
+              let untrimmedAttempt = attempt.split(""); // Trimmed version of the attempt
+              spacedIndices.forEach((spaceIndex) => {
+                untrimmedAttempt.splice(spaceIndex, 0, " "); // Insert spaces back into the attempt
+              });
+
+              let attemptIndex = 0; // Pointer for traversing the trimmed attempt
+              return (
+                <div key={index} className="attempt-row">
+                  {untrimmedAttempt.map((char, charIndex) =>
+                    char === " " ? (
+                      <div key={charIndex} className="answer-space" /> // Render space where it originally existed
+                    ) : (
+                      <div
+                        key={charIndex}
+                        className={`attempt-block ${getFeedbackColor(
+                          feedback[index][attemptIndex] // Map the feedback from the trimmed version
+                        )}`}
+                      >
+                        {attempt[attemptIndex++] || ""}{" "}
+                        {/* Only move through non-space attempt characters */}
+                      </div>
+                    )
+                  )}
+                </div>
+              );
+            })}
           </div>
-        )
-      ))}
-    </div>
-  ))}
-</div>
+
           <div className="answer-container">
-            {question.answer
-              .split("")
-              .map((char, index) =>
-                char === " " ? (
-                  <div key={index} className="answer-space" />
-                ) : (
-                  <input
-                    key={index}
-                    className="answer-input"
-                    maxLength={1}
-                    value={answer[index] || ""}
-                    onChange={(event) =>
-                      handleCharacterChange(index, event.target.value)
+            {Array.from({ length: answerLength }).map((_, index) => {
+              const isSpace = spacedIndices.includes(index);
+              const normalizedIndex =
+                index - spacedIndices.filter((si) => si < index).length;
+
+              return isSpace ? (
+                <div key={index} className="answer-space" />
+              ) : (
+                <input
+                  key={index}
+                  // @ts-ignore
+                  ref={(el) => (inputRefs.current[normalizedIndex] = el)}
+                  className="answer-input"
+                  maxLength={1}
+                  value={answer[normalizedIndex] || ""}
+                  onChange={(event) => {
+                    handleCharacterChange(normalizedIndex, event.target.value);
+
+                    // Move focus to the next input, skipping over spaces
+                    let nextInputIndex = index + 1;
+                    while (spacedIndices.includes(nextInputIndex)) {
+                      nextInputIndex++;
                     }
-                    disabled={gameState !== "playing"}
-                  />
-                )
-              )}
+
+                    if (nextInputIndex < answerLength) {
+                      const nextNormalizedIndex =
+                        nextInputIndex -
+                        spacedIndices.filter((si) => si < nextInputIndex)
+                          .length;
+                      inputRefs.current[nextNormalizedIndex]?.focus();
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Backspace") {
+                      event.preventDefault(); // Prevent default backspace behavior
+
+                      // Handle backspace to move to the previous input, skipping spaces
+                      let prevInputIndex = index - 1;
+                      while (spacedIndices.includes(prevInputIndex)) {
+                        prevInputIndex--;
+                      }
+
+                      if (prevInputIndex >= 0) {
+                        const prevNormalizedIndex =
+                          prevInputIndex -
+                          spacedIndices.filter((si) => si < prevInputIndex)
+                            .length;
+                        inputRefs.current[prevNormalizedIndex]?.focus();
+                        handleCharacterChange(prevNormalizedIndex, ""); // Clear the previous input if needed
+                      }
+                    }
+                  }}
+                  disabled={gameState !== "playing"}
+                />
+              );
+            })}
           </div>
+
           <button
             className="submit-button"
             onClick={() => handleSubmit(answer)}
@@ -376,7 +455,9 @@ export default function QuizGame() {
         {gameState === "finished" && isAuthenticated && (
           <div className="w-1/2">
             <div className="statistics-panel">
-            <h3 className="text-center text-2xl font-bold mb-4">Statistics</h3>
+              <h3 className="text-center text-2xl font-bold mb-4">
+                Statistics
+              </h3>
               <div className="stats-grid">
                 <div className="stat">
                   <div className="stat-value">{stats.played}</div>
@@ -396,14 +477,18 @@ export default function QuizGame() {
                 </div>
               </div>
               <div className="stat">
-        <div className="stat-value">{formatTime(gameState === "finished" ? finalTime : timeElapsed)}</div>
-        <div className="stat-label">Time Taken</div>
-      </div>
-      <div className="shareable-result">
+                <div className="stat-value">
+                  {formatTime(
+                    gameState === "finished" ? finalTime : timeElapsed
+                  )}
+                </div>
+                <div className="stat-label">Time Taken</div>
+              </div>
+              <div className="shareable-result">
                 <h4>Result:</h4>
                 <pre className="result-text">{getShareableResult()}</pre>
               </div>
-      
+
               <button className="copy-button" onClick={handleCopy}>
                 Copy
               </button>
@@ -414,10 +499,12 @@ export default function QuizGame() {
       </div>
       {showToast && <div className="toast">Copied to clipboard</div>}
       <div className="footer">
-      <div className="timer">
-  <Clock className="w-4 h-4" />
-  <span>{formatTime(gameState === "finished" ? finalTime : timeElapsed)}</span>
-</div>
+        <div className="timer">
+          <Clock className="w-4 h-4" />
+          <span>
+            {formatTime(gameState === "finished" ? finalTime : timeElapsed)}
+          </span>
+        </div>
       </div>
     </div>
   );
