@@ -26,7 +26,6 @@
 .quix-header {
   position: relative;
   text-align: center;
-  background-color: #fff; /* Adjust the background color as needed */
   font-size: 24px; /* Adjust the font size as needed */
   font-weight: bold; /* Make the title bold */
 }
@@ -91,8 +90,7 @@ body {
   font-size: 14px;
   text-align: center;
   box-shadow: 4px 4px 0px rgb(0, 0, 0); /* Solid black shadow */;
-
-
+  width: 25%;
 }
 
 .question-content {
@@ -387,11 +385,100 @@ body {
   }
 }
 
-@media (max-width: 480px) {
-  .question-image {
-    padding: 2px;
+/* Media Query for mobile devices */
+@media (max-width: 659px) {
+  .quiz-container {
+    padding: 5px; /* Smaller padding on mobile */
+  }
+
+  .logo {
+    font-size: 16px; /* Smaller logo for mobile */
+  }
+
+  .signin-button {
+    font-size: 12px; /* Smaller sign-in button text */
+  }
+
+  .question-header {
+    font-size: 14px; /* Adjusted question header size */
+    width: 100%; /* Full width for smaller screens */
+  }
+
+  .question-content p {
+    font-size: 12px; /* Smaller question text */
+  }
+
+  .answer-input {
+    width: 25px; /* Even smaller input box */
+    height: 25px; /* Even smaller height */
+    font-size: 12px; /* Smaller font size */
+  }
+
+  .attempt-block {
+    width: 25px; /* Match input size */
+    height: 25px; /* Match input size */
+    font-size: 12px; /* Smaller font size */
+  }
+
+  .statistics-panel {
+    font-size: 12px; /* Smaller font size for stats */
+  }
+
+  .stat {
+    margin-bottom: 5px; /* Reduced margin between stats */
+  }
+
+  .authenticated-box {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 8px;
+    font-size: 14px;
+    background-color: var(--header-bg);
+    color: #000000;
+    border: var(--pixel-border);
+    border-radius: 5px;
+    box-shadow: 4px 4px 0px rgb(0, 0, 0); /* Solid black shadow */
+  }
+
+  .quix-title {
+    font-size: 24px; /* Smaller title for mobile */
+  }
+
+  .answer-input {
+    width: 22px; /* Smaller width for mobile */
+    height: 22px; /* Smaller height for mobile */
+    font-size: 14px; /* Smaller font size for mobile */
   }
 }
+
+@media (max-width: 390px) {
+  .authenticated-box {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 2px;
+    padding: 4px;
+    font-size: 10px;
+    background-color: var(--header-bg);
+    color: #000000;
+    border: var(--pixel-border);
+    border-radius: 5px;
+    box-shadow: 4px 4px 0px rgb(0, 0, 0); /* Solid black shadow */
+  }
+
+  .quix-title {
+    font-size: 12px; /* Smaller title for mobile */
+  }
+
+  .answer-input {
+    width: 18px; /* Smaller width for mobile */
+    height: 18px; /* Smaller height for mobile */
+    font-size: 8px; /* Smaller font size for mobile */
+  }
+}
+
 @media (max-width: 768px) {
   .quix-container {
     width: 95%; /* More width on smaller screens */

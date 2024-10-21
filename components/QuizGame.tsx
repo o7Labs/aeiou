@@ -302,7 +302,6 @@ export default function QuizGame() {
               position: "relative",
               bottom: "12px",
               padding: "4px 2px",
-              width: "25%",
               boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
             }}
           >
@@ -329,9 +328,10 @@ export default function QuizGame() {
                 <Image
                   src={question.image_url}
                   alt="Question image"
-                  width={0} // Set the original width of the image
-                  height={0} // Set the original height of the image
+                  width={100} // Set the original width of the image
+                  height={100} // Set the original height of the image
                   layout="responsive"
+                  style={{ width: "100%", height: "100%" }}
                 />
               </div>
             )}
@@ -439,13 +439,14 @@ export default function QuizGame() {
               <h3>Answer Explanation:</h3>
               <p>{question?.explanation}</p>
               {question?.image_url && question.image_url !== "NULL" && (
-                <div className="explanation-image">
+                <div className="question-image">
                   <Image
                     src={question.image_url}
                     alt="Explanation image"
-                    width={500} // Set the original width of the image
-                    height={300} // Set the original height of the image
+                    width={100} // Set the original width of the image
+                    height={100} // Set the original height of the image
                     layout="responsive"
+                    style={{ width: "100%", height: "100%" }}
                   />
                 </div>
               )}

@@ -42,11 +42,13 @@ export default function Home() {
         </div>
         {isAuthenticated ? (
           <div className="authenticated-box">
-            <img
+            {/* <img
               src={user?.user_metadata?.avatar_url}
               alt="User avatar"
-              className="w-10 h-10 rounded-full"
-            />
+              className="w-10 h-10 rounded-full
+              // make
+              "
+            /> */}
             <span className="text-gray-800 font-semibold">
               Welcome, {user?.user_metadata?.name}
             </span>
