@@ -1,7 +1,6 @@
 "use client";
 import { useContext, useEffect, useState } from "react";
 import QuizGame from "../../components/QuizGame";
-import ArchivedQuestions from "../../components/ArchivedQuestions"; // Ensure this path is correct
 import { SupabaseContext } from "@/providers/supabase";
 import Leaderboard from "../../components/Leaderboard"; // Ensure this path is correct
 import { useRouter } from "next/navigation";
