@@ -521,3 +521,23 @@ body {
   width: 20px;
   display: inline-block;
 }
+/* src/app/globals.css */
+.archived-button {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  font-size: 18px;
+  background-color: var(--header-bg);
+  color: #000000;
+  border: var(--pixel-border);
+  border-radius: 5px;
+  box-shadow: 4px 4px 0px rgb(0, 0, 0);
+  cursor: pointer; /* Add cursor pointer for better UX */
+  transition: background-color 0.3s; /* Optional: Add transition for hover effect */
+}
+
+.archived-button:hover {
+  background-color: #e0e0e0; /* Optional: Change background on hover */
+}
