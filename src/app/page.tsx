@@ -1,5 +1,3 @@
-// page.tsx
-
 "use client";
 import { useContext, useEffect, useState } from "react";
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
@@ -51,28 +49,30 @@ export default function Home() {
               <div className="quix-header text-center">
                 <h1 className="quix-title">AEIOU</h1>
               </div>
-              {isAuthenticated ? (
-                <div className="authenticated-box">
-                  <img
-                    src={user?.user_metadata?.avatar_url}
-                    alt="User avatar"
-                    className="w-10 h-10 rounded-full"
-                  />
-                  <span className="text-gray-800 font-semibold">
-                    Welcome, {user?.user_metadata?.name}
-                  </span>
-                </div>
-              ) : (
-                <button onClick={handleSignIn} className="signin-button">
-                  Sign in with Google
+              <div className="flex items-center gap-4">
+                <button onClick={() => setViewArchived(!viewArchived)} className="archived-button">
+                  {viewArchived ? "Back to Quiz" : "View Archived Questions"}
                 </button>
-              )}
+                {isAuthenticated ? (
+                  <div className="authenticated-box flex items-center gap-2">
+                    <img
+                      src={user?.user_metadata?.avatar_url}
+                      alt="User avatar"
+                      className="w-10 h-10 rounded-full"
+                    />
+                    <span className="text-gray-800 font-semibold">
+                      Welcome, {user?.user_metadata?.name}
+                    </span>
+                  </div>
+                ) : (
+                  <button onClick={handleSignIn} className="signin-button">
+                    Sign in with Google
+                  </button>
+                )}
+              </div>
             </header>
             <div className="flex w-full">
               <div className="flex-1">
-                <button onClick={() => setViewArchived(!viewArchived)} className="view-archived-button">
-                  {viewArchived ? "Back to Quiz" : "View Archived Questions"}
-                </button>
                 {viewArchived ? (
                   <ArchivedQuestions />
                 ) : !hasPlayed ? (
