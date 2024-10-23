@@ -59,29 +59,67 @@ export default function QuizGame() {
     }
   }, [gameState]);
 
-  const fetchQuestion = async () => {
-    const { data, error } = await supabase
-      .from("question")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+  // const fetchQuestion = async () => {
+  //   const { data, error } = await supabase
+  //     .from("question")
+  //     .select("*")
+  //     .order("created_at", { ascending: false })
+  //     .limit(1)
+  //     .single();
 
-    if (error) {
-      console.error("Error fetching question:", error);
-    } else if (data) {
-      const answer = data?.answer;
-      const spacedIndices = answer
-        .split("")
-        .map((char: string, index: number) => (char === " " ? index : -1))
-        .filter((index: number) => index !== -1);
-      spacedIndices.sort((a: number, b: number) => a - b);
-      setSpaceIndices(spacedIndices);
-      setAnswerLength(answer.length);
-      data.answer = data.answer.replace(/ /g, "");
-      setQuestion(data);
-    }
-  };
+  //   if (error) {
+  //     console.error("Error fetching question:", error);
+  //   } else if (data) {
+  //     const answer = data?.answer;
+  //     const spacedIndices = answer
+  //       .split("")
+  //       .map((char: string, index: number) => (char === " " ? index : -1))
+  //       .filter((index: number) => index !== -1);
+  //     spacedIndices.sort((a: number, b: number) => a - b);
+  //     setSpaceIndices(spacedIndices);
+  //     setAnswerLength(answer.length);
+  //     data.answer = data.answer.replace(/ /g, "");
+  //     setQuestion(data);
+  //   }
+  // };
+
+  // ... existing code ...
+
+const fetchQuestion = async () => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0); // Set to the start of the day
+
+  const { data, error } = await supabase
+    .from("question")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Error fetching question:", error);
+  } else if (data) {
+    // Find today's question
+    const todaysQuestion = data.find((question) => {
+      const questionDate = new Date(question.created_at);
+      questionDate.setHours(0, 0, 0, 0);
+      return questionDate.getTime() === today.getTime();
+    });
+
+    const selectedQuestion = todaysQuestion || data[0]; // Use today's question or the latest one
+
+    const answer = selectedQuestion.answer;
+    const spacedIndices = answer
+      .split("")
+      .map((char: string, index: number) => (char === " " ? index : -1))
+      .filter((index: number) => index !== -1);
+    spacedIndices.sort((a: number, b: number) => a - b);
+    setSpaceIndices(spacedIndices);
+    setAnswerLength(answer.length);
+    selectedQuestion.answer = selectedQuestion.answer.replace(/ /g, "");
+    setQuestion(selectedQuestion);
+  }
+};
+
+
 
   useEffect(() => {
     if (showExplanation && !isAuthenticated) {
