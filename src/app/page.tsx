@@ -1,20 +1,16 @@
 "use client";
 import { useContext, useEffect, useState } from "react";
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import QuizGame from "../../components/QuizGame";
 import ArchivedQuestions from "../../components/ArchivedQuestions"; // Ensure this path is correct
-import QuizPage from '../../components/QuizPage'; // Ensure this path is correct
 import { SupabaseContext } from "@/providers/supabase";
-import Leaderboard from '../../components/Leaderboard'; // Ensure this path is correct
+import Leaderboard from "../../components/Leaderboard"; // Ensure this path is correct
+import { useRouter } from "next/navigation";
 
 export default function Home() {
-  const { client, isAuthenticated, user } = useContext(SupabaseContext);
-  const [hasPlayed, setHasPlayed] = useState(false);
-  const [viewArchived, setViewArchived] = useState(false);
+  const router = useRouter();
 
-  const handleSignIn = async () => {
-    await client.auth.signInWithOAuth({ provider: "google" });
-  };
+  const { client, user } = useContext(SupabaseContext);
+  const [hasPlayed, setHasPlayed] = useState(false);
 
   useEffect(() => {
     const checkIfPlayedToday = async () => {
@@ -41,62 +37,21 @@ export default function Home() {
   };
 
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={
-          <main className="flex min-h-screen flex-col items-center justify-between p-6 gap-10">
-            <header className="flex justify-between items-center w-full">
-              <div className="quix-header text-center">
-                <h1 className="quix-title">AEIOU</h1>
-              </div>
-              <div className="flex items-center gap-4">
-                <button onClick={() => setViewArchived(!viewArchived)} className="archived-button">
-                  {viewArchived ? "Back to Quiz" : "View Archived Questions"}
-                </button>
-                {isAuthenticated ? (
-                  <div className="authenticated-box flex items-center gap-2">
-                    <img
-                      src={user?.user_metadata?.avatar_url}
-                      alt="User avatar"
-                      className="w-10 h-10 rounded-full"
-                    />
-                    <span className="text-gray-800 font-semibold">
-                      Welcome, {user?.user_metadata?.name}
-                    </span>
-                  </div>
-                ) : (
-                  <button onClick={handleSignIn} className="signin-button">
-                    Sign in with Google
-                  </button>
-                )}
-              </div>
-            </header>
-            <div className="flex w-full">
-              <div className="flex-1">
-                {viewArchived ? (
-                  <ArchivedQuestions />
-                ) : !hasPlayed ? (
-                  <QuizGame />
-                ) : (
-                  <div className="flex flex-col items-center justify-center">
-                    <h2 className="text-2xl font-semibold text-gray-800">
-                      You have already played today. Please come back tomorrow.
-                    </h2>
-                  </div>
-                )}
-              </div>
-              <div className="w-1/4">
-                <Leaderboard />
-              </div>
-            </div>
-            <footer className="w-full flex items-center justify-center">
-              Made with ❤️ by O7 Labs
-            </footer>
-          </main>
-        } />
-        <Route path="/archive/:id" element={<QuizPage />} />
-        {/* Add more routes as needed */}
-      </Routes>
-    </Router>
+    <div className="flex w-full">
+      <div className="flex-1">
+        {!hasPlayed ? (
+          <QuizGame />
+        ) : (
+          <div className="flex flex-col items-center justify-center">
+            <h2 className="text-2xl font-semibold text-gray-800">
+              You have already played today. Please come back tomorrow.
+            </h2>
+          </div>
+        )}
+      </div>
+      <div className="w-1/4">
+        <Leaderboard />
+      </div>
+    </div>
   );
 }

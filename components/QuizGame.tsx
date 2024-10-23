@@ -1,13 +1,12 @@
 "use client";
 import { useState, useEffect, useRef, useContext, use } from "react";
-import { createClient } from "@supabase/supabase-js";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Button } from "./ui/button";
 import { ChevronDown, Clock, Share2 } from "lucide-react";
 import Image from "next/image";
 import { SupabaseContext } from "@/providers/supabase";
-
-type Feedback = ("correct" | "wrong-position" | "incorrect")[];
+import QuizAttempt from "./quizAttempt";
+import QuizInput from "./quizInput";
+import { calculateScore } from "@/app/utils";
+import { Feedback } from "@/app/type";
 
 interface QuizQuestion {
   id: string;
@@ -203,7 +202,12 @@ export default function QuizGame() {
 
     // Check if the game should end
     if (submittedAnswer.trim() === question.answer || attempts.length === 2) {
-      const score = calculateScore([newFeedback], timeElapsed);
+      const score = calculateScore(
+        question,
+        attempts,
+        [newFeedback],
+        timeElapsed
+      );
       publishStats(score)
         .then(() => {
           setGameState("finished");
@@ -232,79 +236,12 @@ export default function QuizGame() {
       .padStart(2, "0")}`;
   };
 
-  const getFeedbackColor = (
-    type: "correct" | "wrong-position" | "incorrect"
-  ) => {
-    switch (type) {
-      case "correct":
-        return "bg-green-500";
-      case "wrong-position":
-        return "bg-yellow-500";
-      case "incorrect":
-        return "bg-gray-300";
-    }
-  };
-
-  const calculateAEIOUScore = (attemptNumber: number, wordLength: number, won: boolean) => {
-    if (!won) return 0;
-    const maxAttempts = 3;
-    return (maxAttempts + 1 - attemptNumber) * wordLength;
-};
-
-const calculateProbabilityScore = (guessPattern: Feedback) => {
-  if (!guessPattern || guessPattern.length === 0) {
-      return 0; // Return 0 if guessPattern is undefined or empty
-  }
-
-  const wordLength = guessPattern.length;
-  const greens = guessPattern.filter(f => f === "correct").length;
-  const yellows = guessPattern.filter(f => f === "wrong-position").length;
-  const grays = guessPattern.filter(f => f === "incorrect").length;
-
-  return ((greens * 1.0) + (yellows * 0.5) + (grays * 0.1)) / wordLength;
-};
-
-const calculateBonusPoints = (wordLength: number) => {
-    if (wordLength <= 5) return 0;
-    return (wordLength - 5) * 2;
-};
-
-const calculateScore = (feedback: Feedback[], timeElapsed: number) => {
-  const wordLength = question?.answer.length || 0;
-  const attemptNumber = attempts.length;
-  const won = feedback.some(row => row.every(f => f === "correct"));
-
-  // Ensure feedback for the current attempt is available
-  const currentFeedback = feedback[attemptNumber - 1] || [];
-
-  const baseScore = calculateAEIOUScore(attemptNumber, wordLength, won);
-  const infoScore = calculateProbabilityScore(currentFeedback);
-  const lengthBonus = calculateBonusPoints(wordLength);
-
-  const totalScore = baseScore + (infoScore * 10) + lengthBonus;
-  return Math.max(Math.round(totalScore - timeElapsed), 0); // Round to nearest integer and ensure non-negative score
-};
-
-
-//   const calculateScore = (feedback: Feedback[], timeElapsed: number) => {
-//     let score = 0;
-//     feedback.forEach((row) => {
-//         row.forEach((f) => {
-//             if (f === "correct") score += 100;
-//             else if (f === "wrong-position") score += 50;
-//             else if (f === "incorrect") score -= 25;
-//         });
-//     });
-//     score -= timeElapsed; // Subtract 1 point for each second taken
-//     return Math.max(score, 0); // Ensure score is not negative
-// };
-
   const getShareableResult = () => {
-    const score = calculateScore(feedback, timeElapsed);
+    const score = calculateScore(question, attempts, feedback, timeElapsed);
     const feedbackEmojis = feedback
       .map((row) =>
         row
-          .map((f) =>
+          .map((f: any) =>
             f === "correct" ? "🟩" : f === "wrong-position" ? "🟨" : "⬛"
           )
           .join("")
@@ -377,95 +314,21 @@ const calculateScore = (feedback: Feedback[], timeElapsed: number) => {
               </div>
             )}
           </div>
-          <div className="attempts-container">
-            {attempts.map((attempt, index) => {
-              // Copy trimmed attempt and insert spaces based on spacedIndices
-              let untrimmedAttempt = attempt.split(""); // Trimmed version of the attempt
-              spacedIndices.forEach((spaceIndex) => {
-                untrimmedAttempt.splice(spaceIndex, 0, " "); // Insert spaces back into the attempt
-              });
 
-              let attemptIndex = 0; // Pointer for traversing the trimmed attempt
-              return (
-                <div key={index} className="attempt-row">
-                  {untrimmedAttempt.map((char, charIndex) =>
-                    char === " " ? (
-                      <div key={charIndex} className="answer-space" /> // Render space where it originally existed
-                    ) : (
-                      <div
-                        key={charIndex}
-                        className={`attempt-block ${getFeedbackColor(
-                          feedback[index][attemptIndex] // Map the feedback from the trimmed version
-                        )}`}
-                      >
-                        {attempt[attemptIndex++] || ""}{" "}
-                        {/* Only move through non-space attempt characters */}
-                      </div>
-                    )
-                  )}
-                </div>
-              );
-            })}
-          </div>
+          <QuizAttempt
+            attempts={attempts}
+            feedback={feedback}
+            spacedIndices={spacedIndices}
+          />
 
-          <div className="answer-container">
-            {Array.from({ length: answerLength }).map((_, index) => {
-              const isSpace = spacedIndices.includes(index);
-              const normalizedIndex =
-                index - spacedIndices.filter((si) => si < index).length;
-
-              return isSpace ? (
-                <div key={index} className="answer-space" />
-              ) : (
-                <input
-                  key={index}
-                  // @ts-ignore
-                  ref={(el) => (inputRefs.current[normalizedIndex] = el)}
-                  className="answer-input"
-                  maxLength={1}
-                  value={answer[normalizedIndex] || ""}
-                  onChange={(event) => {
-                    handleCharacterChange(normalizedIndex, event.target.value);
-
-                    // Move focus to the next input, skipping over spaces
-                    let nextInputIndex = index + 1;
-                    while (spacedIndices.includes(nextInputIndex)) {
-                      nextInputIndex++;
-                    }
-
-                    if (nextInputIndex < answerLength) {
-                      const nextNormalizedIndex =
-                        nextInputIndex -
-                        spacedIndices.filter((si) => si < nextInputIndex)
-                          .length;
-                      inputRefs.current[nextNormalizedIndex]?.focus();
-                    }
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key === "Backspace") {
-                      event.preventDefault(); // Prevent default backspace behavior
-
-                      // Handle backspace to move to the previous input, skipping spaces
-                      let prevInputIndex = index - 1;
-                      while (spacedIndices.includes(prevInputIndex)) {
-                        prevInputIndex--;
-                      }
-
-                      if (prevInputIndex >= 0) {
-                        const prevNormalizedIndex =
-                          prevInputIndex -
-                          spacedIndices.filter((si) => si < prevInputIndex)
-                            .length;
-                        inputRefs.current[prevNormalizedIndex]?.focus();
-                        handleCharacterChange(prevNormalizedIndex, ""); // Clear the previous input if needed
-                      }
-                    }
-                  }}
-                  disabled={gameState !== "playing"}
-                />
-              );
-            })}
-          </div>
+          <QuizInput
+            answer={answer}
+            gameState={gameState}
+            handleCharacterChange={handleCharacterChange}
+            inputRefs={inputRefs}
+            spacedIndices={spacedIndices}
+            answerLength={answerLength}
+          />
 
           <button
             className="submit-button"

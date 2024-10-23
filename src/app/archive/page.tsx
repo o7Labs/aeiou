@@ -1,23 +1,30 @@
-import React, { useEffect, useState, useContext } from 'react';
-import { Link } from 'react-router-dom';
-import { SupabaseContext } from "@/providers/supabase";
-import './ArchivedQuestions.css';
+"use client";
 
-function ArchivedQuestions() {
+import React, { useEffect, useState, useContext } from "react";
+import { SupabaseContext } from "@/providers/supabase";
+import Link from "next/link";
+
+const ArchivedQuestions = () => {
   const { client } = useContext(SupabaseContext);
-  const [questions, setQuestions] = useState([]);
+  const [questions, setQuestions] = useState<
+    {
+      id: any;
+      created_at: any;
+      question_id: any;
+    }[]
+  >([]);
 
   useEffect(() => {
     const fetchQuestions = async () => {
       const { data, error } = await client
-        .from('question')
-        .select('id, created_at, question_id')
-        .order('created_at', { ascending: false });
+        .from("question")
+        .select("id, created_at, question_id")
+        .order("created_at", { ascending: false });
 
       if (error) {
-        console.error('Error fetching questions:', error);
+        console.error("Error fetching questions:", error);
       } else {
-        console.log('Fetched questions:', data); 
+        console.log("Fetched questions:", data);
         const archivedQuestions = data.slice(1);
         setQuestions(archivedQuestions);
       }
@@ -32,10 +39,14 @@ function ArchivedQuestions() {
       <ul className="archived-questions-list">
         {questions.map((question) => (
           <li key={question.question_id} className="archived-question-item">
-            <Link to={`/archive/${question.question_id}`} className="archived-question-link">
+            <Link
+              href={`/archive/${question.question_id}`}
+              className="archived-question-link"
+            >
               <div className="archived-question-content">
                 <span className="archived-question-title">
-                  Quiz {question.question_id} - {new Date(question.created_at).toLocaleDateString()}
+                  Quiz {question.question_id} -{" "}
+                  {new Date(question.created_at).toLocaleDateString()}
                 </span>
                 <div className="attempts-indicator">
                   <div className="completed"></div>
@@ -50,6 +61,6 @@ function ArchivedQuestions() {
       </ul>
     </div>
   );
-}
+};
 
 export default ArchivedQuestions;

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { SupabaseProvider } from "@/providers/supabase";
+import PageLayout from "../../components/pageLayout";
+import { LayoutProvider } from "@/providers/layout";
 
 const PressStart2P = localFont({
   src: "./fonts/PressStart2P-Regular.ttf",
@@ -26,13 +28,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-            <head>
+      <head>
         <link rel="icon" href="favicon.ico" />
       </head>
-      <body
-        className={`${PressStart2P.variable} antialiased`}
-      >
-        <SupabaseProvider>{children}</SupabaseProvider>
+      <body className={`${PressStart2P.variable} antialiased`}>
+        <SupabaseProvider>
+          <LayoutProvider>
+            <PageLayout>{children}</PageLayout>
+          </LayoutProvider>
+        </SupabaseProvider>
       </body>
     </html>
   );

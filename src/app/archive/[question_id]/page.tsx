@@ -1,10 +1,13 @@
-import React, { useEffect, useState, useContext, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+"use client";
+
+import React, { useEffect, useState, useContext, useRef } from "react";
 import { SupabaseContext } from "@/providers/supabase";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Button } from "./ui/button";
 import { ChevronDown, Clock, Share2 } from "lucide-react";
 import Image from "next/image";
+import { useParams } from "next/navigation";
+import QuizAttempt from "../../../../components/quizAttempt";
+import QuizInput from "../../../../components/quizInput";
+import { calculateScore } from "@/app/utils";
 
 type Feedback = ("correct" | "wrong-position" | "incorrect")[];
 
@@ -18,7 +21,7 @@ interface QuizQuestion {
 }
 
 const QuizPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
+  const { question_id: id } = useParams<{ question_id: string }>();
   const { client: supabase, user } = useContext(SupabaseContext);
   const [question, setQuestion] = useState<QuizQuestion | null>(null);
   const [answer, setAnswer] = useState("");
@@ -30,6 +33,10 @@ const QuizPage: React.FC = () => {
   const [isQuestionExpanded, setIsQuestionExpanded] = useState(false);
   const answerInputRef = useRef<HTMLInputElement>(null);
   const [score, setScore] = useState<number | null>(null);
+
+  const [spacedIndices, setSpaceIndices] = useState<number[]>([]);
+  const [answerLength, setAnswerLength] = useState(0);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
     fetchQuestion();
@@ -46,14 +53,23 @@ const QuizPage: React.FC = () => {
 
   const fetchQuestion = async () => {
     const { data, error } = await supabase
-      .from('question')
-      .select('*')
-      .eq('question_id', id)
+      .from("question")
+      .select("*")
+      .eq("question_id", id)
       .single();
 
     if (error) {
-      console.error('Error fetching question:', error);
+      console.error("Error fetching question:", error);
     } else {
+      const answer = data?.answer;
+      const spacedIndices = answer
+        .split("")
+        .map((char: string, index: number) => (char === " " ? index : -1))
+        .filter((index: number) => index !== -1);
+      spacedIndices.sort((a: number, b: number) => a - b);
+      setSpaceIndices(spacedIndices);
+      setAnswerLength(answer.length);
+      data.answer = data.answer.replace(/ /g, "");
       setQuestion(data);
     }
   };
@@ -70,42 +86,50 @@ const QuizPage: React.FC = () => {
 
   const handleSubmit = (submittedAnswer: string) => {
     if (!question) return;
-  
+
     while (submittedAnswer.length < question.answer.length) {
       submittedAnswer += " ";
     }
-  
-    const newFeedback: Feedback = submittedAnswer.split("").map((char, index) => {
-      if (char === " " && question.answer[index] === " ") {
-        return "correct";
-      } else if (char === question.answer[index]) {
-        return "correct";
-      } else if (question.answer.includes(char)) {
-        return "wrong-position";
-      } else {
-        return "incorrect";
-      }
-    });
-  
+
+    const newFeedback: Feedback = submittedAnswer
+      .split("")
+      .map((char, index) => {
+        if (char === " " && question.answer[index] === " ") {
+          return "correct";
+        } else if (char === question.answer[index]) {
+          return "correct";
+        } else if (question.answer.includes(char)) {
+          return "wrong-position";
+        } else {
+          return "incorrect";
+        }
+      });
+
     setAttempts([...attempts, submittedAnswer]);
     setFeedback([...feedback, newFeedback]);
-  
+
     if (submittedAnswer.trim() === question.answer || attempts.length === 2) {
-      const calculatedScore = calculateScore([newFeedback], timeElapsed);
+      const calculatedScore = calculateScore(
+        question,
+        attempts,
+        [newFeedback],
+        timeElapsed
+      );
       setScore(calculatedScore); // Store the score
       publishStats(calculatedScore);
       setGameState("finished");
       setShowExplanation(true);
     }
-  
+
     setAnswer("");
+    inputRefs.current[0]?.focus();
   };
   const publishStats = async (score: number) => {
     if (!user) {
       console.error("User not authenticated");
       return;
     }
-  
+
     const { error } = await supabase.from("archive_quiz_stats").insert([
       {
         user_id: user.id,
@@ -113,34 +137,30 @@ const QuizPage: React.FC = () => {
         score: score,
       },
     ]);
-  
+
     if (error) {
-      console.error("Error publishing stats:", error.message, error.details, error.hint);
+      console.error(
+        "Error publishing stats:",
+        error.message,
+        error.details,
+        error.hint
+      );
     } else {
       console.log("Stats published successfully");
     }
   };
 
-  const calculateScore = (feedback: Feedback[], timeElapsed: number) => {
-    let score = 0;
-    feedback.forEach((row) => {
-      row.forEach((f) => {
-        if (f === "correct") score += 100;
-        else if (f === "wrong-position") score -= 50;
-        else if (f === "incorrect") score -= 25;
-      });
-    });
-    score -= timeElapsed;
-    return Math.max(score, 0);
-  };
-
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    return `${mins.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
   };
 
-  const getFeedbackColor = (type: "correct" | "wrong-position" | "incorrect") => {
+  const getFeedbackColor = (
+    type: "correct" | "wrong-position" | "incorrect"
+  ) => {
     switch (type) {
       case "correct":
         return "bg-green-500";
@@ -157,18 +177,24 @@ const QuizPage: React.FC = () => {
     <div className="quix-container">
       <div className="w-full flex flex-row gap-10">
         <div className="w-full flex flex-col">
-          <div className="w-full flex flex-col">
-          <div className="question-header" style={{ zIndex: 100, transform: 'translateX(-50%)', left: '50%', position: 'relative', bottom: '12px', padding: '4px 2px', width: '25%', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-            Archived Question {question?.question_id}
+          <div className="w-full flex justify-center items-center flex-row mb-6">
+            <div
+              className="question-header"
+              style={{
+                padding: "4px 2px",
+                width: "25%",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              }}
+            >
+              Archived Question {question?.question_id}
             </div>
             {gameState === "finished" && score !== null && (
-  <div className="score-display">
-    <h3>Your Score: {score}</h3>
-  </div>
-)}
+              <div className="mx-10">
+                <h3>Your Score: {score}</h3>
+              </div>
+            )}
           </div>
-          
-          
+
           <div className="question-content">
             <p className={`${isQuestionExpanded ? "" : "line-clamp-2"}`}>
               {question.question}
@@ -179,7 +205,9 @@ const QuizPage: React.FC = () => {
                 onClick={() => setIsQuestionExpanded(!isQuestionExpanded)}
               >
                 <ChevronDown
-                  className={`w-4 h-4 transition-transform ${isQuestionExpanded ? "rotate-180" : ""}`}
+                  className={`w-4 h-4 transition-transform ${
+                    isQuestionExpanded ? "rotate-180" : ""
+                  }`}
                 />
               </button>
             )}
@@ -195,37 +223,20 @@ const QuizPage: React.FC = () => {
               </div>
             )}
           </div>
-          <div className="attempts-container">
-            {attempts.map((attempt, index) => (
-              <div key={index} className="attempt-row">
-                {attempt.split("").map((char, charIndex) => (
-                  char === " " ? (
-                    <div key={charIndex} className="attempt-space" />
-                  ) : (
-                    <div key={charIndex} className={`attempt-block ${getFeedbackColor(feedback[index][charIndex])}`}>
-                      {char}
-                    </div>
-                  )
-                ))}
-              </div>
-            ))}
-          </div>
-          <div className="answer-container">
-            {question.answer.split("").map((char, index) =>
-              char === " " ? (
-                <div key={index} className="answer-space" />
-              ) : (
-                <input
-                  key={index}
-                  className="answer-input"
-                  maxLength={1}
-                  value={answer[index] || ""}
-                  onChange={(event) => handleCharacterChange(index, event.target.value)}
-                  disabled={gameState !== "playing"}
-                />
-              )
-            )}
-          </div>
+          <QuizAttempt
+            attempts={attempts}
+            feedback={feedback}
+            spacedIndices={spacedIndices}
+          />
+
+          <QuizInput
+            answer={answer}
+            gameState={gameState}
+            handleCharacterChange={handleCharacterChange}
+            inputRefs={inputRefs}
+            spacedIndices={spacedIndices}
+            answerLength={answerLength}
+          />
           <button
             className="submit-button"
             onClick={() => handleSubmit(answer)}
@@ -256,7 +267,9 @@ const QuizPage: React.FC = () => {
       <div className="footer">
         <div className="timer">
           <Clock className="w-4 h-4" />
-          <span>{formatTime(gameState === "finished" ? timeElapsed : timeElapsed)}</span>
+          <span>
+            {formatTime(gameState === "finished" ? timeElapsed : timeElapsed)}
+          </span>
         </div>
       </div>
     </div>
