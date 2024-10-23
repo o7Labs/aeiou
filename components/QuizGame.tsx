@@ -245,18 +245,59 @@ export default function QuizGame() {
     }
   };
 
-  const calculateScore = (feedback: Feedback[], timeElapsed: number) => {
-    let score = 0;
-    feedback.forEach((row) => {
-      row.forEach((f) => {
-        if (f === "correct") score += 100;
-        else if (f === "wrong-position") score -= 50;
-        else if (f === "incorrect") score -= 25;
-      });
-    });
-    score -= timeElapsed;
-    return Math.max(score, 0);
-  };
+  const calculateAEIOUScore = (attemptNumber: number, wordLength: number, won: boolean) => {
+    if (!won) return 0;
+    const maxAttempts = 3;
+    return (maxAttempts + 1 - attemptNumber) * wordLength;
+};
+
+const calculateProbabilityScore = (guessPattern: Feedback) => {
+  if (!guessPattern || guessPattern.length === 0) {
+      return 0; // Return 0 if guessPattern is undefined or empty
+  }
+
+  const wordLength = guessPattern.length;
+  const greens = guessPattern.filter(f => f === "correct").length;
+  const yellows = guessPattern.filter(f => f === "wrong-position").length;
+  const grays = guessPattern.filter(f => f === "incorrect").length;
+
+  return ((greens * 1.0) + (yellows * 0.5) + (grays * 0.1)) / wordLength;
+};
+
+const calculateBonusPoints = (wordLength: number) => {
+    if (wordLength <= 5) return 0;
+    return (wordLength - 5) * 2;
+};
+
+const calculateScore = (feedback: Feedback[], timeElapsed: number) => {
+  const wordLength = question?.answer.length || 0;
+  const attemptNumber = attempts.length;
+  const won = feedback.some(row => row.every(f => f === "correct"));
+
+  // Ensure feedback for the current attempt is available
+  const currentFeedback = feedback[attemptNumber - 1] || [];
+
+  const baseScore = calculateAEIOUScore(attemptNumber, wordLength, won);
+  const infoScore = calculateProbabilityScore(currentFeedback);
+  const lengthBonus = calculateBonusPoints(wordLength);
+
+  const totalScore = baseScore + (infoScore * 10) + lengthBonus;
+  return Math.max(Math.round(totalScore - timeElapsed), 0); // Round to nearest integer and ensure non-negative score
+};
+
+
+//   const calculateScore = (feedback: Feedback[], timeElapsed: number) => {
+//     let score = 0;
+//     feedback.forEach((row) => {
+//         row.forEach((f) => {
+//             if (f === "correct") score += 100;
+//             else if (f === "wrong-position") score += 50;
+//             else if (f === "incorrect") score -= 25;
+//         });
+//     });
+//     score -= timeElapsed; // Subtract 1 point for each second taken
+//     return Math.max(score, 0); // Ensure score is not negative
+// };
 
   const getShareableResult = () => {
     const score = calculateScore(feedback, timeElapsed);
@@ -276,7 +317,7 @@ export default function QuizGame() {
 
     return `AEIOU #${question?.question_id}\n${
       correctAttemptIndex > 0 ? `${correctAttemptIndex}/3` : `X/3`
-    } Score: ${score}\n${feedbackEmojis}`;
+    } Score: ${score}\n${feedbackEmojis}\n\nPlay at: https://playaeiou.vercel.app/`;
   };
   const [showToast, setShowToast] = useState(false);
 
