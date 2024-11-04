@@ -160,32 +160,41 @@ const fetchQuestion = async () => {
     }
   };
   const fetchStats = async () => {
-    // Placeholder implementation
     const data = await getStats();
-    // manipulate data to get below stats
     if (data && data.length > 0) {
-      const totalPlayed = data?.length;
-      const wins = data?.filter((stat) => stat.score > 0).length;
+      const totalPlayed = data.length;
+      const wins = data.filter((stat) => stat.score > 0).length;
       const winPercentage = (wins / totalPlayed) * 100;
-      // when the difference between prev and current created at is more than 24 hours, reset the streak
-      const streak = data.reduce(
-        (acc, stat, index) => {
-          if (index === 0) return acc;
-          const prevCreatedAt = new Date(data[index - 1].created_at);
-          const currentCreatedAt = new Date(stat.created_at);
-          const diff =
-            (currentCreatedAt.getTime() - prevCreatedAt.getTime()) / 1000;
-          if (diff > 24 * 60 * 60) {
-            return { ...acc, currentStreak: 1 };
+  
+      let currentStreak = 0;
+      let maxStreak = 0;
+      let streak = 0;
+  
+      data.forEach((stat, index) => {
+        if (stat.score > 0) {
+          if (index === 0) {
+            streak = 1;
+          } else {
+            const prevCreatedAt = new Date(data[index - 1].created_at);
+            const currentCreatedAt = new Date(stat.created_at);
+            const diff = (currentCreatedAt.getTime() - prevCreatedAt.getTime()) / 1000;
+  
+            if (diff <= 24 * 60 * 60) {
+              streak += 1;
+            } else {
+              streak = 1;
+            }
           }
-          return { ...acc, currentStreak: acc.currentStreak + 1 };
-        },
-        { currentStreak: 1, maxStreak: 1 }
-      );
-
-      const currentStreak = streak.currentStreak;
-      const maxStreak = streak.maxStreak;
-
+          if (streak > maxStreak) {
+            maxStreak = streak;
+          }
+        } else {
+          streak = 0;
+        }
+      });
+  
+      currentStreak = streak; // The last calculated streak is the current streak
+  
       setStats({
         played: totalPlayed,
         winPercentage: winPercentage,
