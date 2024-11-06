@@ -168,7 +168,7 @@ const fetchQuestion = async () => {
   
       let currentStreak = 0;
       let maxStreak = 0;
-      let streak = 0;
+      let streak = 1;
   
       data.forEach((stat, index) => {
         if (stat.score > 0) {
@@ -189,7 +189,7 @@ const fetchQuestion = async () => {
             maxStreak = streak;
           }
         } else {
-          streak = 0;
+          streak = 1; // Reset streak on a loss
         }
       });
   
@@ -205,7 +205,7 @@ const fetchQuestion = async () => {
       setStats({
         played: 0,
         winPercentage: 0,
-        currentStreak: 0,
+        currentStreak: 1,
         maxStreak: 0,
       });
     }
