@@ -219,61 +219,95 @@ const fetchQuestion = async () => {
     }
   };
 
-  const handleSubmit = (submittedAnswer: string) => {
-    if (!question) return;
+  // ... existing code ...
 
-    // Ensure the submitted answer matches the length of the correct answer
-    // Pad the submitted answer with spaces if it's shorter
-    while (submittedAnswer.length < question.answer.length) {
-      submittedAnswer += " ";
-    }
+const handleSubmit = (submittedAnswer: string) => {
+  if (!question) return;
 
-    // Generate feedback for each character
-    const newFeedback: Feedback = submittedAnswer
-      .split("")
-      .map((char, index) => {
-        if (char === " " && question.answer[index] === " ") {
-          return "correct"; // Correct space at the correct position
-        } else if (char === question.answer[index]) {
-          return "correct"; // Correct character at the correct position
-        } else if (question.answer.includes(char)) {
-          return "wrong-position"; // Correct character but at the wrong position
-        } else {
-          return "incorrect"; // Incorrect character
-        }
+  // Ensure the submitted answer matches the length of the correct answer
+  // Pad the submitted answer with spaces if it's shorter
+  while (submittedAnswer.length < question.answer.length) {
+    submittedAnswer += " ";
+  }
+
+  // Generate feedback for each character
+  const newFeedback: Feedback = submittedAnswer
+    .split("")
+    .map((char, index) => {
+      if (char === " " && question.answer[index] === " ") {
+        return "correct"; // Correct space at the correct position
+      } else if (char === question.answer[index]) {
+        return "correct"; // Correct character at the correct position
+      } else if (question.answer.includes(char)) {
+        return "wrong-position"; // Correct character but at the wrong position
+      } else {
+        return "incorrect"; // Incorrect character
+      }
+    });
+
+
+  setAttempts([...attempts, submittedAnswer]);
+  setFeedback([...feedback, newFeedback]);
+
+  // Check if the game should end
+  if (submittedAnswer.trim() === question.answer || attempts.length === 2) {
+    const score = calculateScore(
+      question,
+      attempts,
+      [newFeedback],
+      timeElapsed
+    );
+
+    publishStats(score)
+      .then(() => {
+        setGameState("finished");
+        setFinalTime(timeElapsed);
+        setShowExplanation(true);
+
+        // Update the leaderboard with the new score
+        updateLeaderboard(user?.id, score);
+      })
+      .catch((error) => {
+        console.error("Error publishing stats:", error);
+      })
+      .finally(() => {
+        setTimeElapsed(0);
       });
 
-    // Add the attempt and feedback to their respective arrays
-    setAttempts([...attempts, submittedAnswer]);
-    setFeedback([...feedback, newFeedback]);
+    fetchStats();
+  }
 
-    // Check if the game should end
-    if (submittedAnswer.trim() === question.answer || attempts.length === 2) {
-      const score = calculateScore(
-        question,
-        attempts,
-        [newFeedback],
-        timeElapsed
-      );
-      publishStats(score)
-        .then(() => {
-          setGameState("finished");
-          setFinalTime(timeElapsed);
-          setShowExplanation(true);
-        })
-        .catch((error) => {
-          console.error("Error publishing stats:", error);
-        })
-        .finally(() => {
-          setTimeElapsed(0);
-        });
+  setAnswer(""); // Clear current answer for the next input
+  inputRefs.current[0]?.focus();
+};
 
-      fetchStats();
-    }
+const updateLeaderboard = async (userId: string | undefined, score: number) => {
+  if (!userId) return;
 
-    setAnswer(""); // Clear current answer for the next input
-    inputRefs.current[0]?.focus();
-  };
+  const { data, error } = await supabase
+    .from('leaderboard_view')
+    .select('total_score')
+    .eq('user_id', userId)
+    .single();
+
+  if (error) {
+    console.error('Error fetching current leaderboard score:', error);
+    return;
+  }
+
+  const newTotalScore = (data?.total_score || 0) + score;
+
+  const { error: updateError } = await supabase
+    .from('leaderboard_view')
+    .upsert({ user_id: userId, total_score: newTotalScore }, { onConflict: 'user_id' });
+
+  if (updateError) {
+    console.error('Error updating leaderboard score:', updateError);
+  } else {
+    console.log(`Leaderboard updated for user ID ${userId} with new score ${newTotalScore}`);
+  }
+};
+
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
