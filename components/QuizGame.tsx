@@ -129,13 +129,24 @@ const fetchQuestion = async () => {
   }, [showExplanation]);
 
   const publishStats = async (score: number) => {
-    await supabase.from("quiz_stats").insert([
+    if (!user?.id || !question) return;
+  
+    const shareableResult = getShareableResult(); // Get the shareable result
+  
+    const { error } = await supabase.from("quiz_stats").insert([
       {
-        user_id: user?.id,
-        quiz_id: question?.id,
+        user_id: user.id,
+        quiz_id: question.id,
         score: score,
+        shareable_result: shareableResult, // Store the shareable result
       },
     ]);
+  
+    if (error) {
+      console.error("Error inserting stats:", error);
+    } else {
+      console.log("Stats successfully inserted with shareable result.");
+    }
   };
 
   useEffect(() => {
@@ -496,3 +507,4 @@ const updateLeaderboard = async (userId: string | undefined, score: number) => {
     </div>
   );
 }
+ 
