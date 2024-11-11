@@ -15,6 +15,7 @@ interface QuizQuestion {
   explanation: string;
   image_url?: string;
   question_id: number;
+  answer_url?: string;
 }
 
 export default function QuizGame() {
@@ -423,10 +424,10 @@ const updateLeaderboard = async (userId: string | undefined, score: number) => {
             <div className="explanation">
               <h3>Answer Explanation:</h3>
               <p>{question?.explanation}</p>
-              {question?.image_url && question.image_url !== "NULL" && (
+              {question?.answer_url && question.answer_url !== "NULL" && (
                 <div className="question-image">
                   <Image
-                    src={question.image_url}
+                    src={question.answer_url}
                     alt="Explanation image"
                     width={100} // Set the original width of the image
                     height={100} // Set the original height of the image
