@@ -484,7 +484,7 @@ const updateLeaderboard = async (userId: string | undefined, score: number) => {
           </div>
         )}
       </div>
-      {showToast && <div className="toast">Copied to clipboard</div>}
+      {showToast && <div className="toast">Copied to clipboard!</div>}
       <div className="footer">
         <div className="timer">
           <Clock className="w-4 h-4" />
